@@ -1,6 +1,7 @@
 ﻿
 #include <iostream>
 #include <string>
+#include <fstream>
 
 struct Pipe
 {
@@ -131,20 +132,108 @@ void startWorkshop(CompressorStation& cs)
         std::cout << "All workshops are already working\n";
     }
 }
-
+void savePipe(Pipe pipe)
+{
+    std::ofstream file("pipe.txt");
+    file << pipe.name << std::endl;
+    file << pipe.length << std::endl;
+    file << pipe.diameter << std::endl;
+    file << pipe.inRepair << std::endl;
+    file.close();
+}
+void loadPipe(Pipe& pipe)
+{
+    std::ifstream file("pipe.txt");
+    file >> pipe.name;
+    file >> pipe.length;
+    file >> pipe.diameter;
+    file >> pipe.inRepair;
+    file.close();
+}
+void saveCompressorStation(CompressorStation cs)
+{
+    std::ofstream file("cs.txt");
+    file << cs.name << std::endl;
+    file << cs.workshopCount << std::endl;
+    file << cs.workingWorkshops << std::endl;
+    file << cs.stationClass << std::endl;
+    file.close();
+}
+void loadCompressorStation(CompressorStation& cs)
+{
+    std::ifstream file("cs.txt");
+    file >> cs.name;
+    file >> cs.workshopCount;
+    file >> cs.workingWorkshops;
+    file >> cs.stationClass;
+    file.close();
+}
 int main()
 {
+    Pipe pipe;
+    CompressorStation cs;
+    int choice;
+    while (true)
+    {
+        std::cout << "======================================\n";
+        std::cout << "1. Dobavit pipe\n";
+        std::cout << "2. Dobavit compressor station\n";
+        std::cout << "3. Show all objects\n";
+        std::cout << "4. Edit pipe\n";
+        std::cout << "5. Zapustit station\n";
+        std::cout << "6. Save\n";
+        std::cout << "7. Zagruzit from file\n";
+        std::cout << "0. Exit\n";
+        std::cout << "======================================\n";
+        std::cout << "Choose action: ";
+        std::cin >> choice;
 
-    Pipe pipe2;
-    createPipe(pipe2);
-    showPipe(pipe2);
-    std::cout << '\n';
+        switch (choice)
+        {
+        case 1:
+            createPipe(pipe);
+            break;
 
-    changeRepair(pipe2);
-    showPipe(pipe2);
-    std::cout << '\n';
+        case 2:
+            createCompressorStation(cs);
+            break;
 
-    CompressorStation cs1;
-    createCompressorStation(cs1);
-    showCompressorStation(cs1);
+        case 3:
+            std::cout << "PIPE\n";
+            showPipe(pipe);
+            std::cout << "\n";
+            std::cout << "COMPRESSOR STATION\n";
+            showCompressorStation(cs);
+            break;
+
+        case 4:
+            changeRepair(pipe);
+            break;
+
+
+        case 5:
+            std::cout << "zapustit station\n";
+            startWorkshop(cs);
+            break;
+
+        case 6:
+            savePipe(pipe);
+            saveCompressorStation(cs);
+            std::cout << "Saved\n";
+            break;
+
+        case 7:
+            loadPipe(pipe);
+            loadCompressorStation(cs);
+            std::cout << "Loaded\n";
+            break;
+
+        case 0:
+            return 0;
+
+
+        default:
+            std::cout << "viberi drugoe\n";
+        }
+    }
 }
