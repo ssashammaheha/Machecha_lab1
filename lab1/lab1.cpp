@@ -187,7 +187,6 @@ int main()
         std::cout << "======================================\n";
         std::cout << "Choose action: ";
         std::cin >> choice;
-
         switch (choice)
         {
         case 1:
