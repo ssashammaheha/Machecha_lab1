@@ -43,6 +43,26 @@ void showPipe(Pipe pipe)
         std::cout << "net";
     }
 }
+void showCompressorStation(CompressorStation cs)
+{
+    std::cout << "name: " << cs.name << std::endl;
+
+    std::cout << "kol-vo nasosov: "
+        << cs.workshopCount
+        << " pcs."
+        << std::endl;
+
+    std::cout << "rabotayut "
+        << cs.workingWorkshops
+        << " pcs."
+        << std::endl;
+
+    std::cout << "klass station "
+        << cs.stationClass
+        << std::endl;
+
+    
+}
 void createPipe(Pipe& pipe)
 {
     std::cout << "enter name:";
@@ -61,22 +81,70 @@ void createPipe(Pipe& pipe)
     std::cin >> pipe.inRepair;
 }
 
+void createCompressorStation(CompressorStation& cs)
+{
+    std::cout << "enter name:";
+    std::cin >> cs.name;
+
+
+    std::cout << "kol-vo nasosov:";
+    std::cin >> cs.workshopCount;
+
+
+    std::cout << "seyichas rabotayut:";
+    std::cin >> cs.workingWorkshops;
+
+    while (cs.workshopCount < cs.workingWorkshops)
+    {
+        std::cout << "ne mozhet rabotat stolko stations: ";
+        std::cin >> cs.workingWorkshops;
+    }
+
+
+    std::cout << "klass: 1-moshnaya 2-slabee 3-samaya slabaya ";
+    std::cin >> cs.stationClass;
+
+    while (cs.stationClass < 1 || cs.stationClass > 3)
+    {
+        std::cout << "Wrong value. Enter 1, 2 or 3: ";
+        std::cin >> cs.stationClass;
+    }
+}
+
+void changeRepair(Pipe& pipe)
+{
+    std::cout << "change repair 1 - v remonte 0 - rabotaet :";
+
+    std::cin >> pipe.inRepair;
+}
+
+void startWorkshop(CompressorStation& cs)
+{
+    if (cs.workingWorkshops < cs.workshopCount)
+    {
+        cs.workingWorkshops++;
+
+        std::cout << "Workshop started\n";
+    }
+    else
+    {
+        std::cout << "All workshops are already working\n";
+    }
+}
 
 int main()
 {
-    Pipe pipe1;
-    pipe1.name = "truba 1";
-    pipe1.length = 15.5;
-    pipe1.diameter = 520;
-    pipe1.inRepair = 1;
-    
-
-
-    showPipe(pipe1);
-    std::cout << '\n';
 
     Pipe pipe2;
     createPipe(pipe2);
     showPipe(pipe2);
-    
+    std::cout << '\n';
+
+    changeRepair(pipe2);
+    showPipe(pipe2);
+    std::cout << '\n';
+
+    CompressorStation cs1;
+    createCompressorStation(cs1);
+    showCompressorStation(cs1);
 }
