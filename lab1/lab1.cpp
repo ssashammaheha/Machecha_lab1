@@ -9,6 +9,7 @@ struct Pipe
     double length;
     int diameter;
     bool inRepair;
+    bool est;
 };
 
 struct CompressorStation
@@ -17,6 +18,7 @@ struct CompressorStation
     int workshopCount;
     int workingWorkshops;
     int stationClass;
+    bool est;
 };
 
 void showPipe(Pipe pipe)
@@ -35,7 +37,7 @@ void showPipe(Pipe pipe)
 
     std::cout << "is repair: ";
 
-    if (pipe.inRepair)
+    if (pipe.inRepair)//!!
     {
         std::cout << "da";
     }
@@ -67,56 +69,86 @@ void showCompressorStation(CompressorStation cs)
 void createPipe(Pipe& pipe)
 {
     std::cout << "enter name:";
-    std::cin >> pipe.name;
+    std::cin.ignore();
+    std::getline(std::cin, pipe.name,'\n');
+    
 
 
     std::cout << "enter length:";
-    std::cin >> pipe.length;
+    while (!(std::cin >> pipe.length) || (pipe.length <= 0)) 
+    {
+        std::cout << "nelza" << '\n';
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+        
+    }
 
-
-    std::cout << "enter diametr:";
-    std::cin >> pipe.diameter;
-
-
-    std::cout << "is repair: 1-da 0-net";
-    std::cin >> pipe.inRepair;
+    std::cout << "enter diametr:"; 
+    while (!(std::cin >> pipe.diameter) || (pipe.diameter <= 0)) 
+    {
+        std::cout << "nelza" << '\n';
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+        
+    }
+ 
+    std::cout << "is repair 1-da 0-net:";
+    while (!(std::cin >> pipe.inRepair) || (pipe.inRepair < 0) || (pipe.inRepair > 1))
+    {
+        std::cout << "nelza" << '\n';
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+    }
+    pipe.est = true;
 }
 
 void createCompressorStation(CompressorStation& cs)
 {
     std::cout << "enter name:";
-    std::cin >> cs.name;
+    std::cin.ignore();
+    std::getline(std::cin, cs.name);
 
 
-    std::cout << "kol-vo nasosov:";
-    std::cin >> cs.workshopCount;
+    std::cout << "kol-vo compressors:";
+    while (!(std::cin >> cs.workshopCount) || (cs.workshopCount <= 0))
+    {
+        std::cout << "nelza" << '\n';
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+
+    }
 
 
     std::cout << "seyichas rabotayut:";
-    std::cin >> cs.workingWorkshops;
 
-    while (cs.workshopCount < cs.workingWorkshops)
+    while ((cs.workshopCount < cs.workingWorkshops) || !(std::cin >> cs.workingWorkshops) || (cs.workingWorkshops <= 0))
     {
-        std::cout << "ne mozhet rabotat stolko stations: ";
+        std::cout << "ne mozhet rabotat stolko compressorov: ";
         std::cin >> cs.workingWorkshops;
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
     }
 
 
     std::cout << "klass: 1-moshnaya 2-slabee 3-samaya slabaya ";
     std::cin >> cs.stationClass;
-
-    while (cs.stationClass < 1 || cs.stationClass > 3)
+    while (cs.stationClass < 1 || cs.stationClass > 3 || !(std::cin >> cs.stationClass))
     {
-        std::cout << "Wrong value. Enter 1, 2 or 3: ";
+        std::cout << "Wrong value. Enter 1, 2 or 3: " << '\n';
         std::cin >> cs.stationClass;
     }
+    cs.est = true;
 }
 
 void changeRepair(Pipe& pipe)
 {
     std::cout << "change repair 1 - v remonte 0 - rabotaet :";
-
-    std::cin >> pipe.inRepair;
+    while (!(std::cin >> pipe.inRepair) || (pipe.inRepair < 0) || (pipe.inRepair > 1))
+    {
+        std::cout << "nelza" << '\n';
+        std::cin.clear();
+        std::cin.ignore(10000, '\n');
+    }
 }
 
 void startWorkshop(CompressorStation& cs)
@@ -135,43 +167,66 @@ void startWorkshop(CompressorStation& cs)
 void savePipe(Pipe pipe)
 {
     std::ofstream file("pipe.txt");
-    file << pipe.name << std::endl;
-    file << pipe.length << std::endl;
-    file << pipe.diameter << std::endl;
-    file << pipe.inRepair << std::endl;
-    file.close();
+    if (file)
+    {
+        file << pipe.name << std::endl;
+        file << pipe.length << std::endl;
+        file << pipe.diameter << std::endl;
+        file << pipe.inRepair << std::endl;
+        file.close();
+    }
+    else
+        std::cout << "kakie-to problems" << '\n';
 }
 void loadPipe(Pipe& pipe)
 {
     std::ifstream file("pipe.txt");
-    file >> pipe.name;
-    file >> pipe.length;
-    file >> pipe.diameter;
-    file >> pipe.inRepair;
-    file.close();
+    if (file)
+    {
+        file >> pipe.name;
+        file >> pipe.length;
+        file >> pipe.diameter;
+        file >> pipe.inRepair;
+        file.close();
+    }
+    else
+        std::cout << "kakie-to problems" << '\n';
 }
 void saveCompressorStation(CompressorStation cs)
 {
     std::ofstream file("cs.txt");
-    file << cs.name << std::endl;
-    file << cs.workshopCount << std::endl;
-    file << cs.workingWorkshops << std::endl;
-    file << cs.stationClass << std::endl;
-    file.close();
+    if (file)
+    {
+        file << cs.name << std::endl;
+        file << cs.workshopCount << std::endl;
+        file << cs.workingWorkshops << std::endl;
+        file << cs.stationClass << std::endl;
+        file.close();
+    }
+    else
+        std::cout << "kakie-to problems" << '\n';
 }
 void loadCompressorStation(CompressorStation& cs)
 {
     std::ifstream file("cs.txt");
-    file >> cs.name;
-    file >> cs.workshopCount;
-    file >> cs.workingWorkshops;
-    file >> cs.stationClass;
-    file.close();
+    if (file)
+    {
+        file >> cs.name;
+        file >> cs.workshopCount;
+        file >> cs.workingWorkshops;
+        file >> cs.stationClass;
+        file.close();
+    }
+    else
+        std::cout << "kakie-to problems" << '\n';
 }
 int main()
 {
-    Pipe pipe;
-    CompressorStation cs;
+    Pipe pipe = {};
+    pipe.est = false;
+    
+    CompressorStation cs = {};
+    cs.est = false;
     int choice;
     while (true)
     {
@@ -186,7 +241,12 @@ int main()
         std::cout << "0. Exit\n";
         std::cout << "======================================\n";
         std::cout << "Choose action: ";
-        std::cin >> choice;
+        while (!(std::cin >> choice) || (choice < 0) || (choice > 7))
+        {
+            std::cout << "nelza" << '\n';
+            std::cin.clear();
+            std::cin.ignore(10000, '\n');
+        }
 
         switch (choice)
         {
@@ -207,13 +267,22 @@ int main()
             break;
 
         case 4:
-            changeRepair(pipe);
+            if (pipe.est == false)
+                std::cout << "net trubi\n";
+            else
+                changeRepair(pipe);
             break;
 
 
         case 5:
-            std::cout << "zapustit station\n";
-            startWorkshop(cs);
+            if (cs.est == false)
+                std::cout << "net compressor\n";
+            else
+            {
+                std::cout << "zapustit station\n";
+                startWorkshop(cs);
+            }
+
             break;
 
         case 6:
