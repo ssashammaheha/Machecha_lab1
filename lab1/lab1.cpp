@@ -4,6 +4,9 @@
 #include <fstream>
 #include <map>
 #include <limits>
+#include <iomanip>
+#include <cmath>
+#include <utility>
 
 struct Pipe
 {
@@ -167,92 +170,98 @@ void startWorkshop(CompressorStation& cs)
         std::cout << "All workshops are already working\n";
     }
 }
-void savePipe(Pipe pipe)
+void savePipe(std::ofstream& file, const Pipe& pipe)
 {
-    std::ofstream file("data.txt", std::ios::app);
-    if (file)
+    file << "PIPE" << '\n';
+    file << pipe.id << '\n';
+    file << pipe.name << '\n';
+    file << pipe.length << '\n';
+    file << pipe.diameter << '\n';
+    file << pipe.inRepair << '\n';
+}
+bool loadPipe(std::ifstream& file, Pipe& pipe)
+{
+    if (!(file >> pipe.id))
+        return false;
+
+    file.ignore(
+        std::numeric_limits<std::streamsize>::max(), '\n');
+
+    if (!std::getline(file, pipe.name))
+        return false;
+
+    int repair;
+
+    if (!(file >> pipe.length >> pipe.diameter >> repair))
+        return false;
+
+    if (pipe.id <= 0
+        || pipe.name.empty()
+        || !std::isfinite(pipe.length)
+        || pipe.length <= 0
+        || pipe.diameter <= 0
+        || (repair != 0 && repair != 1))
     {
-        file << "PIPE" << std::endl;
-        file << pipe.name << std::endl;
-        file << pipe.length << std::endl;
-        file << pipe.diameter << std::endl;
-        file << pipe.inRepair << std::endl;
-        file.close();
+        return false;
     }
-    else
-        std::cout << "kakie-to problems\n";
+
+    pipe.inRepair = (repair == 1);
+    pipe.est = true;
+
+    file.ignore(
+        std::numeric_limits<std::streamsize>::max(), '\n');
+
+    return true;
 }
 
-void loadPipe(Pipe& pipe)
+void saveCompressorStation(
+    std::ofstream& file,
+    const CompressorStation& cs)
 {
-    std::ifstream file("data.txt");
-    if (file)
-    {
-        std::string type;
-        while (std::getline(file, type))
-        {
-            if (type == "PIPE")
-            {
-                std::getline(file, pipe.name);
-                if (file >> pipe.length >> pipe.diameter >> pipe.inRepair)
-                {
-                    pipe.est = true;
-                    std::cout << "Pipe loaded\n";
-                }
-                else
-                    std::cout << "Oshibka dannih\n";
-
-                return;
-            }
-        }
-        std::cout << "Truba ne naidena\n";
-    }
-    else
-        std::cout << "kakie-to problems\n";
+    file << "COMPRESSOR" << '\n';
+    file << cs.id << '\n';
+    file << cs.name << '\n';
+    file << cs.workshopCount << '\n';
+    file << cs.workingWorkshops << '\n';
+    file << cs.stationClass << '\n';
 }
-
-void saveCompressorStation(CompressorStation cs)
+bool loadCompressorStation(
+    std::ifstream& file,
+    CompressorStation& cs)
 {
-    std::ofstream file("data.txt", std::ios::app);
-    if (file)
-    {
-        file << "COMPRESSOR" << std::endl;
-        file << cs.name << std::endl;
-        file << cs.workshopCount << std::endl;
-        file << cs.workingWorkshops << std::endl;
-        file << cs.stationClass << std::endl;
-        file.close();
-    }
-    else
-        std::cout << "kakie-to problems\n";
-}
+    if (!(file >> cs.id))
+        return false;
 
-void loadCompressorStation(CompressorStation& cs)
-{
-    std::ifstream file("data.txt");
-    if (file)
-    {
-        std::string type;
+    file.ignore(
+        std::numeric_limits<std::streamsize>::max(), '\n');
 
-        while (std::getline(file, type))
-        {
-            if (type == "COMPRESSOR")
-            {
-                std::getline(file, cs.name);
-                if (file >> cs.workshopCount >> cs.workingWorkshops >> cs.stationClass)
-                {
-                    cs.est = true;
-                    std::cout << "Compressor loaded\n";
-                }
-                else
-                    std::cout << "Oshibka dannih\n";
-                return;
-            }
-        }
-        std::cout << "Compressor ne naiden\n";
+    if (!std::getline(file, cs.name))
+        return false;
+
+    if (!(file >> cs.workshopCount
+        >> cs.workingWorkshops
+        >> cs.stationClass))
+    {
+        return false;
     }
-    else
-        std::cout << "kakie-to problems\n";
+
+    if (cs.id <= 0
+        || cs.name.empty()
+        || cs.workshopCount <= 0
+        || cs.workingWorkshops < 0
+        || cs.workingWorkshops > cs.workshopCount
+        || cs.stationClass < 1
+        || cs.stationClass > 3)
+    {
+        return false;
+    }
+
+    cs.est = true;
+
+    file.ignore(
+        std::numeric_limits<std::streamsize>::max(), '\n');
+
+    return true;
 }
 int main()
 {
@@ -329,57 +338,227 @@ int main()
             break;
         }
         case 4:
-            if (pipe.est == false)
-                std::cout << "net trubi\n";
-            else
-                changeRepair(pipe);
-            break;
-
-
-        case 5:
-            if (cs.est == false)
-                std::cout << "net compressor\n";
+        {
+            if (pipes.empty())
+            {
+                std::cout << "Net trub\n";
+                break;
+            }
+            int id;
+            std::cout << "Vvedite ID truby: ";
+            while (!(std::cin >> id)
+                || std::cin.peek() != '\n'
+                || id <= 0)
+            {
+                if (std::cin.eof())
+                    return 0;
+                std::cout << "Vvedite celoe polozhitelnoe chislo: ";
+                std::cin.clear();
+                std::cin.ignore(
+                    std::numeric_limits<std::streamsize>::max(), '\n');
+            }
+            auto it = pipes.find(id);
+            if (it == pipes.end())
+            {
+                std::cout << "Truba s takim ID ne naidena\n";
+            }
             else
             {
-                std::cout << "zapustit station\n";
-                startWorkshop(cs);
+                changeRepair(it->second);
+                std::cout << "Sostoyanie truby izmeneno\n";
             }
 
             break;
+        }
+        case 5:
+        {
+            if (stations.empty())
+            {
+                std::cout << "Net compressor stations\n";
+                break;
+            }
 
+            int id;
+
+            std::cout << "Vvedite ID compressor station: ";
+
+            while (!(std::cin >> id)
+                || std::cin.peek() != '\n'
+                || id <= 0)
+            {
+                if (std::cin.eof())
+                    return 0;
+
+                std::cout << "Vvedite celoe polozhitelnoe chislo: ";
+                std::cin.clear();
+                std::cin.ignore(
+                    std::numeric_limits<std::streamsize>::max(), '\n');
+            }
+
+            auto it = stations.find(id);
+
+            if (it == stations.end())
+            {
+                std::cout << "Station s takim ID ne naidena\n";
+            }
+            else
+            {
+                startWorkshop(it->second);
+            }
+
+            break;
+        }
         case 6:
         {
-            if (pipe.est || cs.est)
+            if (pipes.empty() && stations.empty())
             {
-                std::ofstream("data.txt").close();
-                if (pipe.est)
-                {
-                    savePipe(pipe);
-                    std::cout << "Truba sohranena\n";
-                }
-                if (cs.est)
-                {
-                    saveCompressorStation(cs);
-                    std::cout << "Compressor sohranen\n";
-                }
+                std::cout << "Net obektov dlya sohraneniya\n";
+                break;
+            }
+
+            std::string filename;
+
+            std::cout << "Vvedite imya faila, naprimer data.txt: ";
+            if (!std::getline(std::cin >> std::ws, filename))
+                return 0;
+
+            std::ofstream file(filename);
+
+            if (!file)
+            {
+                std::cout << "Ne udalos otkryt fail dlya zapisi\n";
+                break;
+            }
+
+            file << std::setprecision(
+                std::numeric_limits<double>::max_digits10);
+
+            for (const auto& item : pipes)
+            {
+                savePipe(file, item.second);
+            }
+
+            for (const auto& item : stations)
+            {
+                saveCompressorStation(file, item.second);
+            }
+
+            file.close();
+
+            if (!file)
+            {
+                std::cout << "Oshibka pri sohranenii dannyh\n";
             }
             else
-                std::cout << "Net obektov dlya sohraneniya\n";
+            {
+                std::cout << "Dannye sohraneny v " << filename << '\n';
+                std::cout << "Trub: " << pipes.size() << '\n';
+                std::cout << "KS: " << stations.size() << '\n';
+            }
 
             break;
         }
         case 7:
         {
-            std::ifstream file("data.txt");
+            std::string filename;
+
+            std::cout << "Vvedite imya faila: ";
+            if (!std::getline(std::cin >> std::ws, filename))
+                return 0;
+
+            std::ifstream file(filename);
+
             if (!file)
             {
                 std::cout << "Fail ne naiden ili ne otkryvaetsya\n";
                 break;
             }
-            file.close();
 
-            loadPipe(pipe);
-            loadCompressorStation(cs);
+            std::map<int, Pipe> loadedPipes;
+            std::map<int, CompressorStation> loadedStations;
+
+            int loadedNextId = nextId;
+            bool correct = true;
+            std::string type;
+
+            while (std::getline(file, type))
+            {
+                if (type.empty())
+                    continue;
+
+                int id;
+
+                if (type == "PIPE")
+                {
+                    Pipe loadedPipe = {};
+
+                    if (!loadPipe(file, loadedPipe))
+                    {
+                        correct = false;
+                        break;
+                    }
+
+                    id = loadedPipe.id;
+
+                    if (loadedPipes.count(id) != 0
+                        || loadedStations.count(id) != 0)
+                    {
+                        correct = false;
+                        break;
+                    }
+
+                    loadedPipes.emplace(id, loadedPipe);
+                }
+                else if (type == "COMPRESSOR")
+                {
+                    CompressorStation loadedStation = {};
+
+                    if (!loadCompressorStation(file, loadedStation))
+                    {
+                        correct = false;
+                        break;
+                    }
+
+                    id = loadedStation.id;
+
+                    if (loadedPipes.count(id) != 0
+                        || loadedStations.count(id) != 0)
+                    {
+                        correct = false;
+                        break;
+                    }
+
+                    loadedStations.emplace(id, loadedStation);
+                }
+                else
+                {
+                    correct = false;
+                    break;
+                }
+
+                if (id == std::numeric_limits<int>::max())
+                {
+                    correct = false;
+                    break;
+                }
+
+                if (id >= loadedNextId)
+                    loadedNextId = id + 1;
+            }
+
+            if (!correct || file.bad())
+            {
+                std::cout << "Oshibka dannyh. Zagruzka otmenena\n";
+                break;
+            }
+
+            pipes = std::move(loadedPipes);
+            stations = std::move(loadedStations);
+            nextId = loadedNextId;
+
+            std::cout << "Dannye zagruzheny iz " << filename << '\n';
+            std::cout << "Trub: " << pipes.size() << '\n';
+            std::cout << "KS: " << stations.size() << '\n';
 
             break;
         }
