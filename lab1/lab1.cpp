@@ -2,9 +2,12 @@
 #include <iostream>
 #include <string>
 #include <fstream>
+#include <map>
+#include <limits>
 
 struct Pipe
 {
+    int id = 0;
     std::string name;
     double length;
     int diameter;
@@ -14,6 +17,7 @@ struct Pipe
 
 struct CompressorStation
 {
+    int id = 0;
     std::string name;
     int workshopCount;
     int workingWorkshops;
@@ -23,6 +27,7 @@ struct CompressorStation
 
 void showPipe(Pipe pipe)
 {
+    std::cout << "ID: " << pipe.id << '\n';
     std::cout << "name: " << pipe.name << std::endl;
 
     std::cout << "lenght: "
@@ -48,9 +53,10 @@ void showPipe(Pipe pipe)
 }
 void showCompressorStation(CompressorStation cs)
 {
+    std::cout << "ID: " << cs.id << '\n';
     std::cout << "name: " << cs.name << std::endl;
 
-    std::cout << "kol-vo nasosov: "
+    std::cout << "kol-vo compreesor: "
         << cs.workshopCount
         << " pcs."
         << std::endl;
@@ -75,16 +81,15 @@ void createPipe(Pipe& pipe)
 
 
     std::cout << "enter length:";
-    while (!(std::cin >> pipe.length) || (pipe.length <= 0)) 
+    while (!(std::cin >> pipe.length) || std::cin.peek() != '\n' || pipe.length <= 0)
     {
-        std::cout << "nelza" << '\n';
+        std::cout << "nelza\n";
         std::cin.clear();
         std::cin.ignore(10000, '\n');
-        
     }
 
     std::cout << "enter diametr:"; 
-    while (!(std::cin >> pipe.diameter) || (pipe.diameter <= 0)) 
+    while (!(std::cin >> pipe.diameter) || std::cin.peek() != '\n' || (pipe.diameter <= 0))
     {
         std::cout << "nelza" << '\n';
         std::cin.clear();
@@ -93,7 +98,7 @@ void createPipe(Pipe& pipe)
     }
  
     std::cout << "is repair 1-da 0-net:";
-    while (!(std::cin >> pipe.inRepair) || (pipe.inRepair < 0) || (pipe.inRepair > 1))
+    while (!(std::cin >> pipe.inRepair) || std::cin.peek() != '\n' || (pipe.inRepair < 0) || (pipe.inRepair > 1))
     {
         std::cout << "nelza" << '\n';
         std::cin.clear();
@@ -110,7 +115,7 @@ void createCompressorStation(CompressorStation& cs)
 
 
     std::cout << "kol-vo compressors:";
-    while (!(std::cin >> cs.workshopCount) || (cs.workshopCount <= 0))
+    while (!(std::cin >> cs.workshopCount) || std::cin.peek() != '\n' || (cs.workshopCount <= 0))
     {
         std::cout << "nelza" << '\n';
         std::cin.clear();
@@ -120,18 +125,16 @@ void createCompressorStation(CompressorStation& cs)
 
 
     std::cout << "seyichas rabotayut:";
-
-    while ((cs.workshopCount < cs.workingWorkshops) || !(std::cin >> cs.workingWorkshops) || (cs.workingWorkshops <= 0))
+    while (!(std::cin >> cs.workingWorkshops) || std::cin.peek() != '\n' || (cs.workingWorkshops < 0) || (cs.workingWorkshops > cs.workshopCount))
     {
-        std::cout << "ne mozhet rabotat stolko compressorov: ";
-        std::cin >> cs.workingWorkshops;
+        std::cout << "Vvedite chislo ot 0 do " << cs.workshopCount << ": ";
         std::cin.clear();
         std::cin.ignore(10000, '\n');
     }
 
 
     std::cout << "klass 1-moshnaya 2-slabee 3-samaya slabaya: ";
-    while (!(std::cin >> cs.stationClass) || cs.stationClass < 1 || cs.stationClass > 3)
+    while (!(std::cin >> cs.stationClass) || std::cin.peek() != '\n' || cs.stationClass < 1 || cs.stationClass > 3)
     {
         std::cout << "Wrong value. Enter 1, 2 or 3: " << '\n';
         std::cin.clear();
@@ -143,7 +146,7 @@ void createCompressorStation(CompressorStation& cs)
 void changeRepair(Pipe& pipe)
 {
     std::cout << "change repair 1 - v remonte 0 - rabotaet :";
-    while (!(std::cin >> pipe.inRepair) || (pipe.inRepair < 0) || (pipe.inRepair > 1))
+    while (!(std::cin >> pipe.inRepair) || std::cin.peek() != '\n' || (pipe.inRepair < 0) || (pipe.inRepair > 1))
     {
         std::cout << "nelza" << '\n';
         std::cin.clear();
@@ -186,8 +189,6 @@ void loadPipe(Pipe& pipe)
     if (file)
     {
         std::string type;
-        std::string line;
-
         while (std::getline(file, type))
         {
             if (type == "PIPE")
@@ -203,13 +204,7 @@ void loadPipe(Pipe& pipe)
 
                 return;
             }
-            else if (type == "COMPRESSOR")
-            {
-                for (int i = 0; i < 4; i++)
-                    std::getline(file, line);
-            }
         }
-
         std::cout << "Truba ne naidena\n";
     }
     else
@@ -238,7 +233,6 @@ void loadCompressorStation(CompressorStation& cs)
     if (file)
     {
         std::string type;
-        std::string line;
 
         while (std::getline(file, type))
         {
@@ -254,11 +248,6 @@ void loadCompressorStation(CompressorStation& cs)
                     std::cout << "Oshibka dannih\n";
                 return;
             }
-            else if (type == "PIPE")
-            {
-                for (int i = 0; i < 4; i++)
-                    std::getline(file, line);
-            }
         }
         std::cout << "Compressor ne naiden\n";
     }
@@ -267,10 +256,13 @@ void loadCompressorStation(CompressorStation& cs)
 }
 int main()
 {
+    std::map<int, Pipe> pipes;
+    std::map<int, CompressorStation> stations;
     Pipe pipe = {};
     pipe.est = false;
     CompressorStation cs = {};
     cs.est = false;
+    int nextId = 1;
     int choice;
     while (true)
     {
@@ -285,7 +277,7 @@ int main()
         std::cout << "0. Exit\n";
         std::cout << "======================================\n";
         std::cout << "Choose action: ";
-        while (!(std::cin >> choice) || (choice < 0) || (choice > 7))
+        while (!(std::cin >> choice) || std::cin.peek() != '\n' || (choice < 0) || (choice > 7))
         {
             std::cout << "nelza" << '\n';
             std::cin.clear();
@@ -296,20 +288,46 @@ int main()
         {
         case 1:
             createPipe(pipe);
+            pipe.id = nextId;
+            pipes.emplace(pipe.id, pipe);
+            nextId++;
+            std::cout << "Truba dobavlena. ID: " << pipe.id << '\n';
+            std::cout << "Vsego trub: " << pipes.size() << '\n';
             break;
 
         case 2:
             createCompressorStation(cs);
+            cs.id = nextId;
+            stations.emplace(cs.id, cs);
+            nextId++;
+            std::cout << "KS dobavlena. ID: " << cs.id << '\n';
+            std::cout << "Vsego KS: " << stations.size() << '\n';
             break;
 
         case 3:
-            std::cout << "PIPE\n";
-            showPipe(pipe);
-            std::cout << "\n";
-            std::cout << "COMPRESSOR STATION\n";
-            showCompressorStation(cs);
-            break;
+        {
+            if (pipes.empty() && stations.empty())
+            {
+                std::cout << "Truba i stanciya ne sozdany\n";
+                break;
+            }
 
+            for (const auto& item : pipes)
+            {
+                std::cout << "\nPIPE\n";
+                showPipe(item.second);
+                std::cout << "\n";
+            }
+
+            for (const auto& item : stations)
+            {
+                std::cout << "\nCOMPRESSOR STATION\n";
+                showCompressorStation(item.second);
+                std::cout << "\n";
+            }
+
+            break;
+        }
         case 4:
             if (pipe.est == false)
                 std::cout << "net trubi\n";
@@ -330,26 +348,39 @@ int main()
             break;
 
         case 6:
-            std::ofstream("data.txt").close();
-            savePipe(pipe);
-            saveCompressorStation(cs);
-            std::cout << "Saved\n";
-            break;
+        {
+            if (pipe.est || cs.est)
+            {
+                std::ofstream("data.txt").close();
+                if (pipe.est)
+                {
+                    savePipe(pipe);
+                    std::cout << "Truba sohranena\n";
+                }
+                if (cs.est)
+                {
+                    saveCompressorStation(cs);
+                    std::cout << "Compressor sohranen\n";
+                }
+            }
+            else
+                std::cout << "Net obektov dlya sohraneniya\n";
 
+            break;
+        }
         case 7:
         {
-            int object;
-            std::cout << "Chto zagruzit? 1 - truba, 2 - compressor: ";
-            while (!(std::cin >> object) || (object < 1) || (object > 2))
+            std::ifstream file("data.txt");
+            if (!file)
             {
-                std::cout << "Vvedite 1 ili 2: ";
-                std::cin.clear();
-                std::cin.ignore(10000, '\n');
+                std::cout << "Fail ne naiden ili ne otkryvaetsya\n";
+                break;
             }
-            if (object == 1)
-                loadPipe(pipe);
-            else
-                loadCompressorStation(cs);
+            file.close();
+
+            loadPipe(pipe);
+            loadCompressorStation(cs);
+
             break;
         }
 
