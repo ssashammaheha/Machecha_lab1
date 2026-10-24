@@ -1,0 +1,74 @@
+
+=== Program started ===
+======================================
+1. Dobavit pipe
+2. Dobavit compressor station
+3. Show all objects
+4. Edit or delete pipes
+5. Zapustit station
+6. Save
+7. Zagruzit from file
+8. Find pipes
+9. Find compressor stations
+0. Exit
+======================================
+Choose action: 1enter name:
+1
+enter length:1enter diametr:
+1is repair 1-da 0-net:
+1Truba dobavlena. ID: 1
+Vsego trub: 1
+======================================
+1. Dobavit pipe
+2. Dobavit compressor station
+3. Show all objects
+4. Edit or delete pipes
+5. Zapustit station
+6. Save
+7. Zagruzit from file
+8. Find pipes
+9. Find compressor stations
+0. Exit
+======================================
+Choose action: 
+3
+PIPE
+ID: 1
+name: 1
+lenght: 1 km
+diametr: 1 mm
+is repair: da
+======================================
+1. Dobavit pipe
+2. Dobavit compressor station
+3. Show all objects
+4. Edit or delete pipes
+5. Zapustit station
+6. Save
+7. Zagruzit from file
+8. Find pipes
+9. Find compressor stations
+0. Exit
+======================================
+Choose action: 
+2enter name:
+æª¥­à
+kol-vo compressors:4321seyichas rabotayut:
+765432Vvedite chislo ot 0 do 4321: 
+1klass 1-moshnaya 2-slabee 3-samaya slabaya: 
+1KS dobavlena. ID: 2
+Vsego KS: 1
+======================================
+1. Dobavit pipe
+2. Dobavit compressor station
+3. Show all objects
+4. Edit or delete pipes
+5. Zapustit station
+6. Save
+7. Zagruzit from file
+8. Find pipes
+9. Find compressor stations
+0. Exit
+======================================
+Choose action: 
+0

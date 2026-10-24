@@ -9,6 +9,48 @@
 #include <utility>
 #include <set>
 
+class StreamLog : public std::streambuf
+{
+    std::ios& stream;
+    std::streambuf* original;
+    std::streambuf* journal;
+    int_type underflow() override
+    {
+        return original->sgetc();
+    }
+    int_type uflow() override
+    {
+        int_type ch = original->sbumpc();
+        if (ch != traits_type::eof())
+            journal->sputc(traits_type::to_char_type(ch));
+        return ch;
+    }
+    int_type overflow(int_type ch) override
+    {
+        if (ch == traits_type::eof())
+            return traits_type::not_eof(ch);
+        char c = traits_type::to_char_type(ch);
+        journal->sputc(c);
+        return original->sputc(c);
+    }
+    int sync() override
+    {
+        int result = original->pubsync();
+        return journal->pubsync() == 0 ? result : -1;
+    }
+public:
+    StreamLog(std::ios& source, std::ostream& log)
+        : stream(source), original(source.rdbuf()),
+        journal(log.rdbuf())
+    {
+        stream.rdbuf(this);
+    }
+    ~StreamLog() override
+    {
+        sync();
+        stream.rdbuf(original);
+    }
+};
 struct Pipe
 {
     int id = 0;
@@ -365,6 +407,86 @@ std::set<int> findStations(
     }
     return foundIds;
 }
+void batchEditPipes(std::map<int, Pipe>& pipes,
+    std::set<int>& foundIds)
+{
+    if (foundIds.empty())
+    {
+        std::cout << "Truby ne naideny\n";
+        return;
+    }
+    for (int id : foundIds)
+    {
+        showPipe(pipes.at(id));
+        std::cout << '\n';
+    }
+    int action;
+    if (!readInt("1 - izmenit remont, 2 - udalit, 0 - otmena: ",
+        action, 0, 2))
+        return;
+    if (action == 0)
+        return;
+    int scope;
+    if (!readInt("1 - vse naidennye, 2 - vybrat po ID: ",
+        scope, 1, 2))
+        return;
+    std::set<int> selectedIds;
+    if (scope == 1)
+    {
+        selectedIds = foundIds;
+    }
+    else
+    {
+        int id;
+        while (true)
+        {
+            if (!readInt("Vvedite ID, 0 - zakonchit vybor: ",
+                id, 0, std::numeric_limits<int>::max()))
+                return;
+            if (id == 0)
+                break;
+            if (foundIds.count(id))
+            {
+                selectedIds.insert(id);
+                std::cout << "Truba vybrana\n";
+            }
+            else
+            {
+                std::cout << "Etogo ID net sredi naidennyh\n";
+            }
+        }
+    }
+
+    if (selectedIds.empty())
+    {
+        std::cout << "Truby ne vybrany\n";
+        return;
+    }
+
+    if (action == 1)
+    {
+        int repair;
+
+        if (!readInt("Novoe sostoyanie: 1 - remont, 0 - rabotaet: ",
+            repair, 0, 1))
+            return;
+
+        for (int id : selectedIds)
+            pipes.at(id).inRepair = repair;
+
+        std::cout << "Izmeneno trub: " << selectedIds.size() << '\n';
+    }
+    else
+    {
+        for (int id : selectedIds)
+        {
+            pipes.erase(id);
+            foundIds.erase(id);
+        }
+
+        std::cout << "Udaleno trub: " << selectedIds.size() << '\n';
+    }
+}
 int main()
 {
     std::map<int, Pipe> pipes;
@@ -376,6 +498,16 @@ int main()
     CompressorStation cs = {};
     cs.est = false;
     int nextId = 1;
+
+    std::ofstream log("log.txt", std::ios::app);
+    if (!log)
+    {
+        std::cout << "Ne udalos otkryt log.txt\n";
+        return 1;
+    }
+    log << "\n=== Program started ===\n";
+    StreamLog inputLog(std::cin, log);
+    StreamLog outputLog(std::cout, log);
     int choice;
     while (true)
     {
@@ -383,7 +515,7 @@ int main()
         std::cout << "1. Dobavit pipe\n";
         std::cout << "2. Dobavit compressor station\n";
         std::cout << "3. Show all objects\n";
-        std::cout << "4. Edit pipe\n";
+        std::cout << "4. Edit or delete pipes\n";
         std::cout << "5. Zapustit station\n";
         std::cout << "6. Save\n";
         std::cout << "7. Zagruzit from file\n";
@@ -440,15 +572,8 @@ int main()
         }
         case 4:
         {
-            int id;
-            if (!readInt("Vvedite ID truby: ", id,
-                1, std::numeric_limits<int>::max()))
-                return 0;
-            auto it = pipes.find(id);
-            if (it != pipes.end())
-                changeRepair(it->second);
-            else
-                std::cout << "Truba ne naidena\n";
+            foundPipeIds = findPipes(pipes);
+            batchEditPipes(pipes, foundPipeIds);
             break;
         }
         case 5:
