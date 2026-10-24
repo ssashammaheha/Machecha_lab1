@@ -72,3 +72,10 @@ Vsego KS: 1
 ======================================
 Choose action: 
 0
+=== Program started ===
+Menu choice: 1
+Pipe added. ID: 1; name: 1
+Menu choice: 1
+Pipe added. ID: 2; name: 1
+Menu choice: 0
+=== Program finished ===

@@ -9,48 +9,6 @@
 #include <utility>
 #include <set>
 
-class StreamLog : public std::streambuf
-{
-    std::ios& stream;
-    std::streambuf* original;
-    std::streambuf* journal;
-    int_type underflow() override
-    {
-        return original->sgetc();
-    }
-    int_type uflow() override
-    {
-        int_type ch = original->sbumpc();
-        if (ch != traits_type::eof())
-            journal->sputc(traits_type::to_char_type(ch));
-        return ch;
-    }
-    int_type overflow(int_type ch) override
-    {
-        if (ch == traits_type::eof())
-            return traits_type::not_eof(ch);
-        char c = traits_type::to_char_type(ch);
-        journal->sputc(c);
-        return original->sputc(c);
-    }
-    int sync() override
-    {
-        int result = original->pubsync();
-        return journal->pubsync() == 0 ? result : -1;
-    }
-public:
-    StreamLog(std::ios& source, std::ostream& log)
-        : stream(source), original(source.rdbuf()),
-        journal(log.rdbuf())
-    {
-        stream.rdbuf(this);
-    }
-    ~StreamLog() override
-    {
-        sync();
-        stream.rdbuf(original);
-    }
-};
 struct Pipe
 {
     int id = 0;
@@ -116,14 +74,14 @@ void showCompressorStation(CompressorStation cs)
         << cs.stationClass
         << std::endl;
 
-    
+
 }
 void createPipe(Pipe& pipe)
 {
     std::cout << "enter name:";
     std::cin.ignore();
-    std::getline(std::cin, pipe.name,'\n');
-    
+    std::getline(std::cin, pipe.name, '\n');
+
 
 
     std::cout << "enter length:";
@@ -134,15 +92,15 @@ void createPipe(Pipe& pipe)
         std::cin.ignore(10000, '\n');
     }
 
-    std::cout << "enter diametr:"; 
+    std::cout << "enter diametr:";
     while (!(std::cin >> pipe.diameter) || std::cin.peek() != '\n' || (pipe.diameter <= 0))
     {
         std::cout << "nelza" << '\n';
         std::cin.clear();
         std::cin.ignore(10000, '\n');
-        
+
     }
- 
+
     std::cout << "is repair 1-da 0-net:";
     while (!(std::cin >> pipe.inRepair) || std::cin.peek() != '\n' || (pipe.inRepair < 0) || (pipe.inRepair > 1))
     {
@@ -408,11 +366,12 @@ std::set<int> findStations(
     return foundIds;
 }
 void batchEditPipes(std::map<int, Pipe>& pipes,
-    std::set<int>& foundIds)
+    std::set<int>& foundIds, std::ofstream& log)
 {
     if (foundIds.empty())
     {
         std::cout << "Truby ne naideny\n";
+        log << "Pipe management: nothing found" << std::endl;
         return;
     }
     for (int id : foundIds)
@@ -424,12 +383,14 @@ void batchEditPipes(std::map<int, Pipe>& pipes,
     if (!readInt("1 - izmenit remont, 2 - udalit, 0 - otmena: ",
         action, 0, 2))
         return;
+    log << "Pipe action: " << action << " (1 - edit repair, 2 - delete, 0 - cancel)" << std::endl;
     if (action == 0)
         return;
     int scope;
     if (!readInt("1 - vse naidennye, 2 - vybrat po ID: ",
         scope, 1, 2))
         return;
+    log << "Pipe selection: " << scope << " (1 - all found, 2 - selected IDs)" << std::endl;
     std::set<int> selectedIds;
     if (scope == 1)
     {
@@ -448,11 +409,13 @@ void batchEditPipes(std::map<int, Pipe>& pipes,
             if (foundIds.count(id))
             {
                 selectedIds.insert(id);
+                log << "Pipe selected. ID: " << id << std::endl;
                 std::cout << "Truba vybrana\n";
             }
             else
             {
                 std::cout << "Etogo ID net sredi naidennyh\n";
+                log << "Pipe selection rejected. ID: " << id << std::endl;
             }
         }
     }
@@ -460,6 +423,7 @@ void batchEditPipes(std::map<int, Pipe>& pipes,
     if (selectedIds.empty())
     {
         std::cout << "Truby ne vybrany\n";
+        log << "Pipe management cancelled: no pipes selected" << std::endl;
         return;
     }
 
@@ -472,7 +436,11 @@ void batchEditPipes(std::map<int, Pipe>& pipes,
             return;
 
         for (int id : selectedIds)
+        {
+            log << "Pipe edited. ID: " << id << "; repair: "
+                << pipes.at(id).inRepair << " -> " << repair << std::endl;
             pipes.at(id).inRepair = repair;
+        }
 
         std::cout << "Izmeneno trub: " << selectedIds.size() << '\n';
     }
@@ -482,6 +450,7 @@ void batchEditPipes(std::map<int, Pipe>& pipes,
         {
             pipes.erase(id);
             foundIds.erase(id);
+            log << "Pipe deleted. ID: " << id << std::endl;
         }
 
         std::cout << "Udaleno trub: " << selectedIds.size() << '\n';
@@ -506,8 +475,6 @@ int main()
         return 1;
     }
     log << "\n=== Program started ===\n";
-    StreamLog inputLog(std::cin, log);
-    StreamLog outputLog(std::cout, log);
     int choice;
     while (true)
     {
@@ -526,6 +493,8 @@ int main()
         if (!readInt("Choose action: ", choice, 0, 9))
             return 0;
 
+        log << "Menu choice: " << choice << std::endl;
+
         switch (choice)
         {
         case 1:
@@ -535,6 +504,7 @@ int main()
             nextId++;
             std::cout << "Truba dobavlena. ID: " << pipe.id << '\n';
             std::cout << "Vsego trub: " << pipes.size() << '\n';
+            log << "Pipe added. ID: " << pipe.id << "; name: " << pipe.name << std::endl;
             break;
 
         case 2:
@@ -544,10 +514,12 @@ int main()
             nextId++;
             std::cout << "KS dobavlena. ID: " << cs.id << '\n';
             std::cout << "Vsego KS: " << stations.size() << '\n';
+            log << "Station added. ID: " << cs.id << "; name: " << cs.name << std::endl;
             break;
 
         case 3:
         {
+            log << "Show all objects" << std::endl;
             if (pipes.empty() && stations.empty())
             {
                 std::cout << "Truba i stanciya ne sozdany\n";
@@ -573,7 +545,8 @@ int main()
         case 4:
         {
             foundPipeIds = findPipes(pipes);
-            batchEditPipes(pipes, foundPipeIds);
+            log << "Pipe management. Found: " << foundPipeIds.size() << std::endl;
+            batchEditPipes(pipes, foundPipeIds, log);
             break;
         }
         case 5:
@@ -584,9 +557,17 @@ int main()
                 return 0;
             auto it = stations.find(id);
             if (it != stations.end())
+            {
+                log << "Workshop start requested. Station ID: " << id
+                    << "; working before: " << it->second.workingWorkshops << std::endl;
                 startWorkshop(it->second);
+                log << "Working after: " << it->second.workingWorkshops << std::endl;
+            }
             else
+            {
                 std::cout << "Station ne naidena\n";
+                log << "Station not found. ID: " << id << std::endl;
+            }
             break;
         }
         case 6:
@@ -594,16 +575,19 @@ int main()
             if (pipes.empty() && stations.empty())
             {
                 std::cout << "Net obektov dlya sohraneniya\n";
+                log << "Save cancelled: no objects" << std::endl;
                 break;
             }
             std::string filename;
             std::cout << "Vvedite imya faila, naprimer data.txt: ";
             if (!std::getline(std::cin >> std::ws, filename))
                 return 0;
+            log << "Save requested. File: " << filename << std::endl;
             std::ofstream file(filename);
             if (!file)
             {
                 std::cout << "Ne udalos otkryt fail dlya zapisi\n";
+                log << "Save failed: cannot open file" << std::endl;
                 break;
             }
             file << std::setprecision(
@@ -620,12 +604,14 @@ int main()
             if (!file)
             {
                 std::cout << "Oshibka pri sohranenii dannyh\n";
+                log << "Save failed: write error" << std::endl;
             }
             else
             {
                 std::cout << "Dannye sohraneny v " << filename << '\n';
                 std::cout << "Trub: " << pipes.size() << '\n';
                 std::cout << "KS: " << stations.size() << '\n';
+                log << "Data saved. File: " << filename << std::endl;
             }
             break;
         }
@@ -635,10 +621,12 @@ int main()
             std::cout << "Vvedite imya faila: ";
             if (!std::getline(std::cin >> std::ws, filename))
                 return 0;
+            log << "Load requested. File: " << filename << std::endl;
             std::ifstream file(filename);
             if (!file)
             {
                 std::cout << "Fail ne naiden\n";
+                log << "Load failed: cannot open file" << std::endl;
                 break;
             }
             pipes.clear();
@@ -693,11 +681,13 @@ int main()
                 pipes.clear();
                 stations.clear();
                 std::cout << "Fail povrezhden. Dannye ne zagruzheny\n";
+                log << "Load failed: damaged file. Objects cleared" << std::endl;
             }
             else
             {
                 std::cout << "Zagruzheno trub: " << pipes.size()
                     << ", KS: " << stations.size() << '\n';
+                log << "Data loaded. File: " << filename << std::endl;
             }
 
             break;
@@ -705,6 +695,7 @@ int main()
         case 8:
         {
             foundPipeIds = findPipes(pipes);
+            log << "Pipe search. Found: " << foundPipeIds.size() << std::endl;
             if (foundPipeIds.empty())
                 std::cout << "Truby ne naideny\n";
             for (int id : foundPipeIds)
@@ -717,6 +708,7 @@ int main()
         case 9:
         {
             foundStationIds = findStations(stations);
+            log << "Station search. Found: " << foundStationIds.size() << std::endl;
             if (foundStationIds.empty())
                 std::cout << "KS ne naideny\n";
             for (int id : foundStationIds)
@@ -727,6 +719,7 @@ int main()
             break;
         }
         case 0:
+            log << "=== Program finished ===" << std::endl;
             return 0;
 
 
