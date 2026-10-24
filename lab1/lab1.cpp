@@ -7,6 +7,7 @@
 #include <iomanip>
 #include <cmath>
 #include <utility>
+#include <set>
 
 struct Pipe
 {
@@ -263,10 +264,113 @@ bool loadCompressorStation(
 
     return true;
 }
+bool readInt(const std::string& message, int& value,
+    int minValue, int maxValue)
+{
+    std::cout << message;
+    while (!(std::cin >> value)
+        || std::cin.peek() != '\n'
+        || value < minValue
+        || value > maxValue)
+    {
+        if (std::cin.eof())
+            return false;
+        std::cout << "Vvedite celoe chislo ot "
+            << minValue << " do " << maxValue << ": ";
+        std::cin.clear();
+        std::cin.ignore(
+            std::numeric_limits<std::streamsize>::max(), '\n');
+    }
+    return true;
+}
+std::set<int> findPipes(const std::map<int, Pipe>& pipes)
+{
+    std::set<int> foundIds;
+    int choice;
+    if (!readInt("Po nazvaniyu - 1, po remontu - 2: ",
+        choice, 1, 2))
+        return foundIds;
+    if (choice == 1)
+    {
+        std::string text;
+        std::cout << "Vvedite nazvanie ili ego chast: ";
+        if (!std::getline(std::cin >> std::ws, text))
+            return foundIds;
+        for (const auto& item : pipes)
+        {
+            if (item.second.name.find(text) != std::string::npos)
+                foundIds.insert(item.first);
+        }
+    }
+    else
+    {
+        int repair;
+        if (!readInt("V remonte - 1, rabotaet - 0: ",
+            repair, 0, 1))
+            return foundIds;
+        for (const auto& item : pipes)
+        {
+            if (item.second.inRepair == repair)
+                foundIds.insert(item.first);
+        }
+    }
+    return foundIds;
+}
+std::set<int> findStations(
+    const std::map<int, CompressorStation>& stations)
+{
+    std::set<int> foundIds;
+    int choice;
+    if (!readInt("Po nazvaniyu - 1, po procentu - 2: ",
+        choice, 1, 2))
+        return foundIds;
+    if (choice == 1)
+    {
+        std::string text;
+        std::cout << "Vvedite nazvanie ili ego chast: ";
+        if (!std::getline(std::cin >> std::ws, text))
+            return foundIds;
+        for (const auto& item : stations)
+        {
+            if (item.second.name.find(text) != std::string::npos)
+                foundIds.insert(item.first);
+        }
+    }
+    else
+    {
+        double percent;
+        std::cout << "Vvedite minimalnyi procent ot 0 do 100: ";
+        while (!(std::cin >> percent)
+            || std::cin.peek() != '\n'
+            || !std::isfinite(percent)
+            || percent < 0
+            || percent > 100)
+        {
+            if (std::cin.eof())
+                return foundIds;
+            std::cout << "Vvedite chislo ot 0 do 100: ";
+            std::cin.clear();
+            std::cin.ignore(
+                std::numeric_limits<std::streamsize>::max(), '\n');
+        }
+        for (const auto& item : stations)
+        {
+            const CompressorStation& cs = item.second;
+            double idlePercent =
+                100.0 * (cs.workshopCount - cs.workingWorkshops)
+                / cs.workshopCount;
+            if (idlePercent >= percent)
+                foundIds.insert(item.first);
+        }
+    }
+    return foundIds;
+}
 int main()
 {
     std::map<int, Pipe> pipes;
     std::map<int, CompressorStation> stations;
+    std::set<int> foundPipeIds;
+    std::set<int> foundStationIds;
     Pipe pipe = {};
     pipe.est = false;
     CompressorStation cs = {};
@@ -283,15 +387,12 @@ int main()
         std::cout << "5. Zapustit station\n";
         std::cout << "6. Save\n";
         std::cout << "7. Zagruzit from file\n";
+        std::cout << "8. Find pipes\n";
+        std::cout << "9. Find compressor stations\n";
         std::cout << "0. Exit\n";
         std::cout << "======================================\n";
-        std::cout << "Choose action: ";
-        while (!(std::cin >> choice) || std::cin.peek() != '\n' || (choice < 0) || (choice > 7))
-        {
-            std::cout << "nelza" << '\n';
-            std::cin.clear();
-            std::cin.ignore(10000, '\n');
-        }
+        if (!readInt("Choose action: ", choice, 0, 9))
+            return 0;
 
         switch (choice)
         {
@@ -339,73 +440,28 @@ int main()
         }
         case 4:
         {
-            if (pipes.empty())
-            {
-                std::cout << "Net trub\n";
-                break;
-            }
             int id;
-            std::cout << "Vvedite ID truby: ";
-            while (!(std::cin >> id)
-                || std::cin.peek() != '\n'
-                || id <= 0)
-            {
-                if (std::cin.eof())
-                    return 0;
-                std::cout << "Vvedite celoe polozhitelnoe chislo: ";
-                std::cin.clear();
-                std::cin.ignore(
-                    std::numeric_limits<std::streamsize>::max(), '\n');
-            }
+            if (!readInt("Vvedite ID truby: ", id,
+                1, std::numeric_limits<int>::max()))
+                return 0;
             auto it = pipes.find(id);
-            if (it == pipes.end())
-            {
-                std::cout << "Truba s takim ID ne naidena\n";
-            }
-            else
-            {
+            if (it != pipes.end())
                 changeRepair(it->second);
-                std::cout << "Sostoyanie truby izmeneno\n";
-            }
-
+            else
+                std::cout << "Truba ne naidena\n";
             break;
         }
         case 5:
         {
-            if (stations.empty())
-            {
-                std::cout << "Net compressor stations\n";
-                break;
-            }
-
             int id;
-
-            std::cout << "Vvedite ID compressor station: ";
-
-            while (!(std::cin >> id)
-                || std::cin.peek() != '\n'
-                || id <= 0)
-            {
-                if (std::cin.eof())
-                    return 0;
-
-                std::cout << "Vvedite celoe polozhitelnoe chislo: ";
-                std::cin.clear();
-                std::cin.ignore(
-                    std::numeric_limits<std::streamsize>::max(), '\n');
-            }
-
+            if (!readInt("Vvedite ID compressor station: ", id,
+                1, std::numeric_limits<int>::max()))
+                return 0;
             auto it = stations.find(id);
-
-            if (it == stations.end())
-            {
-                std::cout << "Station s takim ID ne naidena\n";
-            }
-            else
-            {
+            if (it != stations.end())
                 startWorkshop(it->second);
-            }
-
+            else
+                std::cout << "Station ne naidena\n";
             break;
         }
         case 6:
@@ -415,36 +471,27 @@ int main()
                 std::cout << "Net obektov dlya sohraneniya\n";
                 break;
             }
-
             std::string filename;
-
             std::cout << "Vvedite imya faila, naprimer data.txt: ";
             if (!std::getline(std::cin >> std::ws, filename))
                 return 0;
-
             std::ofstream file(filename);
-
             if (!file)
             {
                 std::cout << "Ne udalos otkryt fail dlya zapisi\n";
                 break;
             }
-
             file << std::setprecision(
                 std::numeric_limits<double>::max_digits10);
-
             for (const auto& item : pipes)
             {
                 savePipe(file, item.second);
             }
-
             for (const auto& item : stations)
             {
                 saveCompressorStation(file, item.second);
             }
-
             file.close();
-
             if (!file)
             {
                 std::cout << "Oshibka pri sohranenii dannyh\n";
@@ -455,114 +502,105 @@ int main()
                 std::cout << "Trub: " << pipes.size() << '\n';
                 std::cout << "KS: " << stations.size() << '\n';
             }
-
             break;
         }
         case 7:
         {
             std::string filename;
-
             std::cout << "Vvedite imya faila: ";
             if (!std::getline(std::cin >> std::ws, filename))
                 return 0;
-
             std::ifstream file(filename);
-
             if (!file)
             {
-                std::cout << "Fail ne naiden ili ne otkryvaetsya\n";
+                std::cout << "Fail ne naiden\n";
                 break;
             }
-
-            std::map<int, Pipe> loadedPipes;
-            std::map<int, CompressorStation> loadedStations;
-
-            int loadedNextId = nextId;
-            bool correct = true;
+            pipes.clear();
+            stations.clear();
             std::string type;
-
+            bool correct = true;
             while (std::getline(file, type))
             {
                 if (type.empty())
                     continue;
-
+                Pipe p = {};
+                CompressorStation c = {};
                 int id;
-
                 if (type == "PIPE")
                 {
-                    Pipe loadedPipe = {};
-
-                    if (!loadPipe(file, loadedPipe))
+                    if (!loadPipe(file, p))
                     {
                         correct = false;
                         break;
                     }
-
-                    id = loadedPipe.id;
-
-                    if (loadedPipes.count(id) != 0
-                        || loadedStations.count(id) != 0)
-                    {
-                        correct = false;
-                        break;
-                    }
-
-                    loadedPipes.emplace(id, loadedPipe);
+                    id = p.id;
                 }
                 else if (type == "COMPRESSOR")
                 {
-                    CompressorStation loadedStation = {};
-
-                    if (!loadCompressorStation(file, loadedStation))
+                    if (!loadCompressorStation(file, c))
                     {
                         correct = false;
                         break;
                     }
-
-                    id = loadedStation.id;
-
-                    if (loadedPipes.count(id) != 0
-                        || loadedStations.count(id) != 0)
-                    {
-                        correct = false;
-                        break;
-                    }
-
-                    loadedStations.emplace(id, loadedStation);
+                    id = c.id;
                 }
                 else
                 {
                     correct = false;
                     break;
                 }
-
-                if (id == std::numeric_limits<int>::max())
+                if (pipes.count(id) || stations.count(id)
+                    || id == std::numeric_limits<int>::max())
                 {
                     correct = false;
                     break;
                 }
-
-                if (id >= loadedNextId)
-                    loadedNextId = id + 1;
+                if (type == "PIPE")
+                    pipes.emplace(id, p);
+                else
+                    stations.emplace(id, c);
+                if (id >= nextId)
+                    nextId = id + 1;
             }
-
             if (!correct || file.bad())
             {
-                std::cout << "Oshibka dannyh. Zagruzka otmenena\n";
-                break;
+                pipes.clear();
+                stations.clear();
+                std::cout << "Fail povrezhden. Dannye ne zagruzheny\n";
             }
-
-            pipes = std::move(loadedPipes);
-            stations = std::move(loadedStations);
-            nextId = loadedNextId;
-
-            std::cout << "Dannye zagruzheny iz " << filename << '\n';
-            std::cout << "Trub: " << pipes.size() << '\n';
-            std::cout << "KS: " << stations.size() << '\n';
+            else
+            {
+                std::cout << "Zagruzheno trub: " << pipes.size()
+                    << ", KS: " << stations.size() << '\n';
+            }
 
             break;
         }
-
+        case 8:
+        {
+            foundPipeIds = findPipes(pipes);
+            if (foundPipeIds.empty())
+                std::cout << "Truby ne naideny\n";
+            for (int id : foundPipeIds)
+            {
+                showPipe(pipes.at(id));
+                std::cout << '\n';
+            }
+            break;
+        }
+        case 9:
+        {
+            foundStationIds = findStations(stations);
+            if (foundStationIds.empty())
+                std::cout << "KS ne naideny\n";
+            for (int id : foundStationIds)
+            {
+                showCompressorStation(stations.at(id));
+                std::cout << '\n';
+            }
+            break;
+        }
         case 0:
             return 0;
 
